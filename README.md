@@ -737,3 +737,5 @@ build: ${BPFCODE.c} ${BPFLOADER}
 27. [tracing in linux](http://chrisarges.net/2018/10/04/tracing-in-linux.html     )
 
 28. [**A Deep Dive into eBPF: The Technology that Powers Tracee**](https://blog.aquasec.com/intro-ebpf-tracing-containers)
+
+29. [[译] Cilium：BPF 和 XDP 参考指南（2021）](https://arthurchiao.art/blog/cilium-bpf-xdp-reference-guide-zh/)
