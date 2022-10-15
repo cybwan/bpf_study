@@ -42,7 +42,27 @@ dataplane](https://events.istio.io/istiocon-2022/slides/b6-ebpf-iptables.pdf)
 
 [基于 Ubuntu 21.04 BPF 开发环境全攻略 | 深入浅出 eBPF](https://www.ebpf.top/post/ubuntu_2104_bpf_env/)
 
+## eBPF&tc
 
+[Understanding tc “direct action” mode for BPF](https://arthurchiao.art/blog/understanding-tc-da-mode-zh/)
+
+[Ubuntu 21.10 编写 eBPF tc 程序](https://alenliu.blog.csdn.net/article/details/125754880)
+
+[Advanced: XDP interacting with TC](https://github.com/xdp-project/xdp-tutorial/blob/master/advanced01-xdp-tc-interact/README.org)
+
+[你的第一个TC BPF 程序](https://cloud.tencent.com/developer/article/1626377)
+
+[eBPF: Traffic Control Subsystem](https://blog.51cto.com/u_15703183/5464446)
+
+[Exploring Kernel Networking: BPF Hook Points, Part 1 – Elementary, My Dear Watson](https://blog.stackpath.com/bpf-hook-points-part-1/)
+
+[Exploring Kernel Networking: BPF Hook Points, Part 2 – Say “hello” to my little friend!](https://blog.stackpath.com/bpf-hook-points-part-2/)
+
+[Deep dive & Getting started with PSA implementation for eBPF](https://opennetworking.org/wp-content/uploads/2022/05/Deep-Dive-Getting-Started-with-PSA-Implementation-for-eBFP-Final-Slide-Deck.pdf)
+
+[Cilium 从 0 到 0.1](https://domc.me/2021/10/17/cilium_0_to_0_1/)
+
+[Understanding the eBPF networking features in RHEL](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_networking/assembly_understanding-the-ebpf-features-in-rhel_configuring-and-managing-networking#doc-wrapper)
 
 ## Ubuntu Jammy (22.04) LTS
 
@@ -96,10 +116,17 @@ sudo make modules_install install
 sudo update-grub2
 
 sudo systemctl reboot
-uname -r
+uname -sr
 
 cd net-next/tools/testing/selftests/bpf
 make
 sudo ./test_verifier
+
+cd ~
+git clone --recursive https://github.com/libbpf/libbpf-bootstrap.git
+cd libbpf-bootstrap/examples/c
+make
+ls -hl
+sudo strace -e bpf ./bootstrap
 ```
 
