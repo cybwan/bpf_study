@@ -44,75 +44,61 @@ dataplane](https://events.istio.io/istiocon-2022/slides/b6-ebpf-iptables.pdf)
 
 
 
-## Setup the extended Berkeley Packet Filter (eBPF) Environment
+## Ubuntu Jammy (22.04) LTS
 
 https://maofeichen.com/setup-the-extended-berkeley-packet-filter-ebpf-environment/
 
 ```bash
+PUBKEY=4EB27DB2A3B88B8B
+gpg --keyserver keyserver.ubuntu.com --recv "${PUBKEY}"
+gpg --export --armor "${PUBKEY}" | apt-key add -
+
 sudo apt -y update
 sudo apt -y full-upgrade
+sudo apt -y autoclean
+sudo apt -y autoremove
 
 sudo apt install -y build-essential git make libelf-dev strace tar bpfcc-tools \
 linux-headers-$(uname -r) binutils-dev gcc-multilib libcap-dev libpcap-dev flex \
-pkg-config bison libssl-dev
-sudo apt install -y dwarves
-sudo apt install -y docutils-common
+pkg-config bison libssl-dev dwarves docutils-common zstd
 
 #https://apt.llvm.org/
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-#
-cat > /etc/apt/sources.list.d/llvm.list <<EOF
-deb http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main
-deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-15 main
-EOF
 
 #Jammy (22.04) LTS
 cat > /etc/apt/sources.list.d/llvm.list <<EOF
 deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main
 deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main
 EOF
-#gpg --keyserver keyserver.ubuntu.com --recv 15CF4D18AF4F7421
-#gpg --export --armor 15CF4D18AF4F7421 | apt-key add -
 
 sudo apt remove -y clang-* llvm-* --purge
 sudo apt -y update
-sudo apt install -y clang-format clang-tidy clang-tools clang clangd libc++-dev libc++1 libc++abi-dev libc++abi1 libclang-dev libclang1 liblldb-dev libllvm-ocaml-dev libomp-dev libomp5 lld lldb llvm-dev llvm-runtime llvm python3-clang
-#sudo apt install -y libllvm-15-ocaml-dev libllvm15 llvm-15 llvm-15-dev llvm-15-doc llvm-15-examples llvm-15-runtime
-#sudo apt install -y clang-15 clang-tools-15 clang-15-doc libclang-common-15-dev libclang-15-dev libclang1-15 clang-format-15 python3-clang-15 clangd-15 clang-tidy-15
-#sudo apt install -y libfuzzer-15-dev
-#sudo apt install -y lldb-15
-#sudo apt install -y lld-15
-#sudo apt install -y libc++-15-dev libc++abi-15-dev
-#sudo apt install -y docutils-common
-#sudo apt install -y python-docutils
-#ln -s /usr/bin/clang-15  /usr/bin/clang
-#ln -s /usr/bin/llvm-15 /usr/bin/llvm
-#ln -s /usr/bin/llvm-strip-15 /usr/bin/llvm-strip
+sudo apt -y autoremove
+sudo apt -y autoclean
 
-git clone git://git.kernel.org/pub/scm/linux/kernel/git/netdev/net-next.git \
---depth=1 -b v5.19
+sudo apt install -y clang-format clang-tidy clang-tools clang clangd \
+libc++-dev libc++1 libc++abi-dev libc++abi1 libclang-dev libclang1 liblldb-dev \
+libllvm-ocaml-dev libomp-dev libomp5 lld lldb llvm-dev llvm-runtime llvm python3-clang
+
+git clone git://git.kernel.org/pub/scm/linux/kernel/git/netdev/net-next.git --depth=1 -b v5.19
 
 cd net-next
 git tag
-cp /boot/config-`uname -r`* .config
-make menuconfig
+cp /boot/config-`uname -r`* .config; make menuconfig
 
-#sed -i 's#debian/canonical-certs.pem##g' .config
-#sed -i 's#debian/canonical-revoked-certs.pem##g' .config
-#sed -i 's#certs/x509_certificate_list##g' .config
 scripts/config --disable SYSTEM_TRUSTED_KEYS
 scripts/config --disable SYSTEM_REVOCATION_KEYS
-
-make -j2
 sed -i 's#CONFIG_BPF_UNPRIV_DEFAULT_OFF=y#CONFIG_BPF_UNPRIV_DEFAULT_OFF=n#g' .config
+
 make -j8
-sudo make INSTALL_MOD_STRIP=1 modules_install install
+sudo make modules_install install
+#sudo make INSTALL_MOD_STRIP=1 modules_install install
 sudo update-grub2
 
 sudo systemctl reboot
 uname -r
 
-cd tools/testing/selftests/bpf
+cd net-next/tools/testing/selftests/bpf
 make
 sudo ./test_verifier
 ```
