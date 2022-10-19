@@ -64,6 +64,18 @@ dataplane](https://events.istio.io/istiocon-2022/slides/b6-ebpf-iptables.pdf)
 
 [Understanding the eBPF networking features in RHEL](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_networking/assembly_understanding-the-ebpf-features-in-rhel_configuring-and-managing-networking#doc-wrapper)
 
+https://github.com/mikeroyal/eBPF-Guide
+
+[Clion配置ebpf-xdp环境](https://zhuanlan.zhihu.com/p/491491882)
+
+## eBPF XDP
+
+[eBPF XDP: The Basics and a Quick Tutorial](https://www.tigera.io/learn/guides/ebpf/ebpf-xdp/)
+
+https://www.ebpf.top/post/ebpf_learn_path/
+
+https://elixir.bootlin.com/linux/v5.19/source/include/uapi/linux/bpf.h
+
 ## Ubuntu Jammy (22.04) LTS
 
 https://maofeichen.com/setup-the-extended-berkeley-packet-filter-ebpf-environment/
@@ -80,7 +92,9 @@ sudo apt -y autoremove
 
 sudo apt install -y build-essential git make libelf-dev strace tar bpfcc-tools \
 linux-headers-$(uname -r) binutils-dev gcc-multilib libcap-dev libpcap-dev flex \
-pkg-config bison libssl-dev dwarves docutils-common zstd
+pkg-config bison libssl-dev dwarves docutils-common zstd bear
+
+sudo apt install -y linux-source
 
 #https://apt.llvm.org/
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
@@ -110,10 +124,18 @@ scripts/config --disable SYSTEM_TRUSTED_KEYS
 scripts/config --disable SYSTEM_REVOCATION_KEYS
 sed -i 's#CONFIG_BPF_UNPRIV_DEFAULT_OFF=y#CONFIG_BPF_UNPRIV_DEFAULT_OFF=n#g' .config
 
-make -j8
-sudo make modules_install install
+bear -- make -j8
+sudo make modules_install
+sudo make headers_install
+sudo make install
 #sudo make INSTALL_MOD_STRIP=1 modules_install install
 sudo update-grub2
+
+../kernel-grok/generate_cmake
+mkdir build
+cd build
+cmake ..
+make -j8
 
 sudo systemctl reboot
 uname -sr
@@ -128,5 +150,79 @@ cd libbpf-bootstrap/examples/c
 make
 ls -hl
 sudo strace -e bpf ./bootstrap
+```
+
+### Ref Script
+
+```bash
+make -C /root/net-next.samples/samples/bpf/../../tools/lib/bpf RM='rm -rf' 
+
+
+EXTRA_CFLAGS="-Wall -O2 -Wmissing-prototypes -Wstrict-prototypes -I./usr/include -I./tools/testing/selftests/bpf/ -I/root/net-next.samples/samples/bpf/libbpf/include -I./tools/include -I./tools/perf -DHAVE_ATTR_TEST=0" \
+        LDFLAGS= srctree=/root/net-next.samples/samples/bpf/../../ \
+        O= OUTPUT=/root/net-next.samples/samples/bpf/libbpf/ DESTDIR=/root/net-next.samples/samples/bpf/libbpf
+
+
+include_directories("/root/net-next/include")
+include_directories("/root/net-next.samples/usr/include")
+include_directories("/root/net-next.samples/tools/testing/selftests/bpf")
+include_directories("/root/net-next/samples/bpf/libbpf/include")
+include_directories("/root/net-next.samples/tools/include")
+include_directories("/root/net-next.samples/tools/perf")
+
+make -C /root/net-next/samples/bpf/../../tools/bpf/bpftool srctree=/root/net-next/samples/bpf/../../ \
+        OUTPUT=/root/net-next/samples/bpf/bpftool/ \
+        LIBBPF_OUTPUT=/root/net-next/samples/bpf/libbpf/ \
+        LIBBPF_DESTDIR=/root/net-next/samples/bpf/libbpf/
+
+
+make -C /root/net-next/samples/bpf/../../tools/lib/bpf RM='rm -rf' EXTRA_CFLAGS="-Wall -O2 -Isamples/bpf/../../tools/include -Isamples/bpf/../../tools/include/uapi -I/root/net-next/samples/bpf/libbpf/include -Isamples/bpf/../../tools/testing/selftests/bpf" \
+        LDFLAGS= srctree=/root/net-next/samples/bpf/../../ \
+        O= OUTPUT=/root/net-next/samples/bpf/libbpf/ DESTDIR=/root/net-next/samples/bpf/libbpf prefix= \
+        /root/net-next/samples/bpf/libbpf/libbpf.a install_headers
+
+
+
+
+gcc -Wp,-MD,samples/bpf/.sampleip_user.o.d -Wall -O2 -Wmissing-prototypes -Wstrict-prototypes -I./usr/include -I./tools/testing/selftests/bpf/ -I/root/net-next/samples/bpf/libbpf/include -I./tools/include -I./tools/perf -DHAVE_ATTR_TEST=0  -c -o samples/bpf/sampleip_user.o samples/bpf/sampleip_user.c
+
+
+
+gcc -Wp,-MD,samples/bpf/.sampleip.d -Wall -O2 -Wmissing-prototypes -Wstrict-prototypes -I./usr/include -I./tools/testing/selftests/bpf/ -I/root/net-next/samples/bpf/libbpf/include -I./tools/include -I./tools/perf -DHAVE_ATTR_TEST=0   -o samples/bpf/sampleip samples/bpf/sampleip_user.o samples/bpf/../../tools/testing/selftests/bpf/trace_helpers.o /root/net-next/samples/bpf/libbpf/libbpf.a -lelf -lz 
+
+
+
+clang -nostdinc -I./arch/x86/include -I./arch/x86/include/generated  -I./include -I./arch/x86/include/uapi -I./arch/x86/include/generated/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/compiler-version.h -include ./include/linux/kconfig.h -fno-stack-protector -g \
+        -Isamples/bpf -I./tools/testing/selftests/bpf/ \
+        -I/root/net-next/samples/bpf/libbpf/include \
+        -D__KERNEL__ -D__BPF_TRACING__ -Wno-unused-value -Wno-pointer-sign \
+        -D__TARGET_ARCH_x86 -Wno-compare-distinct-pointer-types \
+        -Wno-gnu-variable-sized-type-not-at-end \
+        -Wno-address-of-packed-member -Wno-tautological-compare \
+        -Wno-unknown-warning-option  \
+        -fno-asynchronous-unwind-tables \
+        -I./samples/bpf/ -include asm_goto_workaround.h \
+        -O2 -emit-llvm -Xclang -disable-llvm-passes -c samples/bpf/sampleip_kern.c -o - | \
+        opt -O2 -mtriple=bpf-pc-linux | llvm-dis | \
+        llc -march=bpf  -filetype=obj -o samples/bpf/sampleip_kern.o
+
+
+
+link_directories("/root/net-next.samples/samples/bpf/libbpf")
+
+include_directories("/root/net-next.samples/usr/include")
+
+include_directories("/root/net-next/arch/x86/include")
+include_directories("/root/net-next/arch/x86/include/uapi")
+include_directories("/root/net-next/include")
+
+include_directories("/root/net-next.samples/samples/bpf/libbpf/include")
+include_directories("/root/net-next.samples/tools/perf")
+include_directories("/root/net-next.samples/tools/testing/selftests/bpf")
+
+add_library(kernel OBJECT
+    /root/net-next/samples/bpf/sampleip_user.c
+    /root/net-next/samples/bpf/sampleip_kern.c
+)
 ```
 
